@@ -1,0 +1,64 @@
+vertex_program ShadowReceiverVP cg
+{
+	source ShadowReceiver.cg
+	entry_point main_vp
+	profiles vs_3_0 arbvp1
+
+	default_params
+	{
+		param_named_auto worldViewProj worldviewproj_matrix
+		param_named_auto worldMat world_matrix
+		shared_params_ref params_shadowMatrix
+	}
+}
+
+// Need slightly different fragment programs for DX9 vs OGL because each handles tex2D in branches differently (see TEX2D_FORCE_ZERO_GRAD_IN_BRANCH)
+fragment_program ShadowReceiverFP_DX cg
+{
+	source ShadowReceiver.cg
+	entry_point main_fp
+	profiles ps_3_0
+
+	compile_arguments -DTEX2D_FORCE_ZERO_GRAD_IN_BRANCH
+
+	default_params
+	{
+		param_named_auto lightDirection light_direction 0
+		param_named_auto ambientColor ambient_light_colour
+		shared_params_ref params_shadowMatrixScaleBias
+		
+		param_named fixedDepthBias float4 0.0005, 0.001, 0.001, 0.003;
+		param_named gradientScaleBias float4 0.0005, 0.001, 0.001, 0.003;
+		param_named shadowMapSize float4 1024 1024 1024 1024;
+		param_named invShadowMapSize float4 0.0009765625 0.0009765625 0.0009765625 0.0009765625;
+		param_named shadowFadeDist float 500;
+		param_named shadowMaxDist float 6000;
+	}
+}
+
+fragment_program ShadowReceiverFP_OGL cg
+{
+	source ShadowReceiver.cg
+	entry_point main_fp
+	profiles arbfp1
+
+	default_params
+	{
+		param_named_auto lightDirection light_direction 0
+		param_named_auto ambientColor ambient_light_colour
+		shared_params_ref params_shadowMatrixScaleBias
+		
+		param_named fixedDepthBias float4 0.0005, 0.001, 0.001, 0.003;
+		param_named gradientScaleBias float4 0.0005, 0.001, 0.001, 0.003;
+		param_named shadowMapSize float4 1024 1024 1024 1024;
+		param_named invShadowMapSize float4 0.0009765625 0.0009765625 0.0009765625 0.0009765625;
+		param_named shadowFadeDist float 500;
+		param_named shadowMaxDist float 6000;
+	}
+}
+
+fragment_program ShadowReceiverFP unified
+{
+	delegate ShadowReceiverFP_DX
+	delegate ShadowReceiverFP_OGL
+}

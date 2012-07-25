@@ -1,0 +1,57 @@
+material ShadowReceiver
+{
+	technique
+	{
+		pass
+		{
+
+			vertex_program_ref ShadowReceiverVP
+			{
+			}
+
+			fragment_program_ref ShadowReceiverFP
+			{
+			}
+
+			shadow_caster_vertex_program_ref ShadowCasterVP
+			{
+			}
+
+			shadow_caster_fragment_program_ref ShadowCasterFP
+			{
+			}
+
+			texture_unit Diffuse
+			{
+
+			}
+
+			texture_unit
+			{
+				content_type shadow
+				tex_address_mode clamp
+			}
+			texture_unit
+			{
+				content_type shadow
+				tex_address_mode clamp
+			}
+			texture_unit
+			{
+				content_type shadow
+				tex_address_mode clamp
+			}
+			texture_unit
+			{
+				content_type shadow
+				tex_address_mode clamp
+			}
+
+			texture_unit
+			{
+				texture KernelRotation.png
+				filtering none
+			}
+		}
+	}
+}

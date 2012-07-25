@@ -1,0 +1,47 @@
+import * from "ShadowReceiver.material"
+
+material Examples/Rockwall : ShadowReceiver
+{
+	technique
+	{
+		pass
+		{
+			texture_unit Diffuse
+			{
+				texture rockwall.tga
+			}
+		}
+	}
+}
+
+material Examples/Athene/Basic : ShadowReceiver
+{
+	technique
+	{
+		pass
+		{
+			texture_unit Diffuse
+			{
+				texture athene.jpg 
+			}
+		}
+	}
+}
+
+material Examples/StormySkyBox
+{
+	technique
+	{
+		pass
+		{
+			lighting off
+			depth_write off
+
+			texture_unit
+			{
+				cubic_texture stormy.jpg separateUV
+				tex_address_mode clamp
+			}
+		}
+	}
+}
