@@ -30,11 +30,11 @@ half getShadowFactor
 	float depthAdjust = fixedDepthBias + (1.0f - abs(shadowLightDotLN)) * gradientScaleBias;
 	lightSpacePos.z -= depthAdjust; // lightSpacePos.z contains lightspace position of current object
 
-
-	const float4 offsets[4] = {	float4(-0.3464376f, -0.7120676f,  0.4692491f, -0.7939163f)*3,
-								float4(0.1561844f, -0.04416115f,  -0.9133415f, -0.3314315f)*3,
-								float4(-0.4210564f, 0.4838058f, 0.5794852f, 0.474482f)*3,
-								float4(0.7723071f, -0.2627881f, 0.07587272f, 0.926478f)*3};
+	const float radius = 3.0f;
+	const float4 offsets[4] = {	float4(-0.3464376f, -0.7120676f,  0.4692491f, -0.7939163f) * radius,
+								float4(0.1561844f, -0.04416115f,  -0.9133415f, -0.3314315f) * radius,
+								float4(-0.4210564f, 0.4838058f, 0.5794852f, 0.474482f) * radius,
+								float4(0.7723071f, -0.2627881f, 0.07587272f, 0.926478f) * radius};
 
 
 
