@@ -43,7 +43,7 @@ void main_vp
 {
 	oPosition = mul(worldViewProj, iPosition);
 	oTexCoord0 = iTexCoord0;
-	oNormal = mul(float3x3(worldMat), iNormal);
+	oNormal = normalize(mul(float3x3(worldMat), iNormal));
 
 	// Calculate vertex position in light space
 	float4 worldPos = mul(worldMat, iPosition);
