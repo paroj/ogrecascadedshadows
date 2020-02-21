@@ -6,13 +6,6 @@
 
 namespace Ogre {
 
-const Matrix4 PROJECTIONCLIPSPACE2DTOIMAGESPACE_PERSPECTIVE(
-    0.5,    0,    0,  0.5, 
-    0,   -0.5,    0,  0.5, 
-    0,      0,    1,    0,
-    0,      0,    0,    1);
-
-
 CSMGpuConstants::CSMGpuConstants(size_t cascadeCount)
 {
 	mParamsScaleBias = GpuProgramManager::getSingletonPtr()->createSharedParameters("params_shadowMatrixScaleBias");
@@ -33,12 +26,12 @@ void CSMGpuConstants::updateCascade(const Ogre::Camera &texCam, size_t index)
 		mFirstCascadeCamWidth = texCam.getOrthoWindowWidth();
 		mViewRange = texCam.getFarClipDistance() - texCam.getNearClipDistance();
 
-		Matrix4 texMatrix0 = PROJECTIONCLIPSPACE2DTOIMAGESPACE_PERSPECTIVE * texCam.getProjectionMatrixWithRSDepth() * mFirstCascadeViewMatrix;
+		Matrix4 texMatrix0 = Matrix4::CLIPSPACE2DTOIMAGESPACE * texCam.getProjectionMatrixWithRSDepth() * mFirstCascadeViewMatrix;
 		mParamsShadowMatrix->setNamedConstant("texMatrix0", texMatrix0);
 	}
 	else
 	{
-		hack = PROJECTIONCLIPSPACE2DTOIMAGESPACE_PERSPECTIVE * texCam.getProjectionMatrixWithRSDepth() * texCam.getViewMatrix();
+		hack = Matrix4::CLIPSPACE2DTOIMAGESPACE * texCam.getProjectionMatrixWithRSDepth() * texCam.getViewMatrix();
 
 		Matrix4 mat0 = mFirstCascadeViewMatrix;
 		Matrix4 mat1 = texCam.getViewMatrix();

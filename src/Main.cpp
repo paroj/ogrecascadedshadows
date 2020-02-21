@@ -2,18 +2,17 @@
     This file is subject to the terms and conditions defined in
     file 'License.txt', which is part of this source code package.
 */
-#define OIS_DYNAMIC_LIB
-
 #include "ShadowCameraSetupStableCSM.h"
 #include "CSMGpuConstants.h"
 
 #include <Ogre.h> 
-#include <ExampleApplication.h>
+#include <OgreApplicationContext.h>
+#include <OgreCameraMan.h>
  
 using namespace Ogre; 
  
 
-class Application : public ExampleApplication
+class Application : public OgreBites::ApplicationContext
 {
 public:
 	Application() :
@@ -32,19 +31,28 @@ public:
 		static const int maxCascades = 4;
 		mGpuConstants = new CSMGpuConstants(maxCascades);
 
-		ExampleApplication::loadResources();
+		OgreBites::ApplicationContext::loadResources();
 	}
 
-    void createScene()
+    void setup()
     {
+        OgreBites::ApplicationContext::setup();
+        mSceneMgr = getRoot()->createSceneManager();
+
+        auto cam = mSceneMgr->createCamera("MainCam");
+        cam->setAutoAspectRatio(true);
+        cam->setNearClipDistance(1);
+        auto camNode = mSceneMgr->getRootSceneNode()->createChildSceneNode();
+        camNode->attachObject(cam);
+        getRenderWindow()->addViewport(cam);
+
+        auto camman = new OgreBites::CameraMan(camNode);
+        camman->setStyle(OgreBites::CS_ORBIT);
+        addInputListener(camman);
+
 		setupGeometry();
 		setupLights();
 		setupShadows();
-    }
-
-	void chooseSceneManager()
-    {
-        mSceneMgr = mRoot->createSceneManager(ST_GENERIC);
     }
 
 private:
@@ -153,6 +161,7 @@ private:
 	}
 
 	CSMGpuConstants* mGpuConstants;
+    SceneManager* mSceneMgr;
 };
 
 
@@ -160,7 +169,9 @@ private:
 int main(int argc, char **argv)
 {
 	Application app;
-	app.go();
+    app.initApp();
+	app.getRoot()->startRendering();
+    app.closeApp();
 
     return 0; 
 }

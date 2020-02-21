@@ -182,8 +182,8 @@ void StableCSMShadowCameraSetup::getShadowCameraForCascade (const SceneManager *
 
 
 	// Finally set position
-	texCam->setPosition(pos);
-	texCam->setOrientation(q);
+	texCam->getParentNode()->setPosition(pos);
+	texCam->getParentNode()->setOrientation(q);
 
 	// set some GPU shader parameters
 	mGpuConstants->updateCascade(*texCam, iteration);

@@ -1,7 +1,26 @@
+material ShadowCaster
+{
+    technique
+    {
+        pass
+        {
+			vertex_program_ref ShadowCasterVP
+			{
+			}
+
+			fragment_program_ref ShadowCasterFP
+			{
+			}
+        }
+    }
+}
+
+
 material ShadowReceiver
 {
 	technique
 	{
+        shadow_caster_material ShadowCaster
 		pass
 		{
 
@@ -10,14 +29,6 @@ material ShadowReceiver
 			}
 
 			fragment_program_ref ShadowReceiverFP
-			{
-			}
-
-			shadow_caster_vertex_program_ref ShadowCasterVP
-			{
-			}
-
-			shadow_caster_fragment_program_ref ShadowCasterFP
 			{
 			}
 
