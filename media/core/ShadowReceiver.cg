@@ -11,10 +11,18 @@ uniform sampler2D shadowTexture3 : register(s4);
 uniform sampler2D jitterMapUnit : register(s5);
 
 
-//#define DEBUG_CSM // enables cascade debug visualisation
+#define DEBUG_CSM // enables cascade debug visualisation
 #define JITTER_SHADOWS // enables poisson disk jitter filtering
 
-#include "Utils.h"
+arbfp1 float4 tex2D_inBranch(uniform sampler2D sampler, float2 texCoords)
+{
+	return tex2D(sampler, texCoords);
+}
+
+ps_3_0 float4 tex2D_inBranch(uniform sampler2D sampler, float2 texCoords)
+{
+	return tex2D(sampler, texCoords, 0, 0);
+}
 
 #ifdef JITTER_SHADOWS
 #include "DepthShadowMapReceiverJitter.h"
@@ -69,15 +77,8 @@ void main_fp
 	float lDotN = dot(iNormal.xyz, -lightDirection.xyz);
 	half3 lambert = saturate(lDotN);
 
-#ifdef DEBUG_CSM
-	half3 shadow = getCsmShadowFactor(shadowTexture0, shadowTexture1, shadowTexture2, shadowTexture3,
-								   iShadowLightspacePos, lDotN); 
-
-
-#else
 	half shadow = getCsmShadowFactor(shadowTexture0, shadowTexture1, shadowTexture2, shadowTexture3,
 								   iShadowLightspacePos, lDotN); 
-#endif
 
 	// Fade out shadows near max distance
 	half weight = saturate(((iTexCoord0.z + shadowFadeDist) - shadowMaxDist) / shadowFadeDist);
@@ -92,4 +93,8 @@ void main_fp
 	//
 	oColor = tex2D(diffuseTexture, iTexCoord0.xy) * brightness;
 	oColor.a = 1;
+
+#ifdef DEBUG_CSM
+	oColor.rgb *= cascadeColor;
+#endif
 }

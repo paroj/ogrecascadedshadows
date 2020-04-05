@@ -7,9 +7,8 @@
 
 namespace Ogre {
 
-StableCSMShadowCameraSetup::StableCSMShadowCameraSetup(CSMGpuConstants* constants) :
-	mSplitPadding(1.0f),
-	mGpuConstants(constants)
+StableCSMShadowCameraSetup::StableCSMShadowCameraSetup() :
+	mSplitPadding(1.0f)
 {
 	calculateSplitPoints(3, 100, 100000);
 }
@@ -20,9 +19,7 @@ StableCSMShadowCameraSetup::~StableCSMShadowCameraSetup()
 //---------------------------------------------------------------------
 void StableCSMShadowCameraSetup::calculateSplitPoints(size_t cascadeCount, Real firstSplitDist, Real farDist, Real lambda)
 {
-	if (cascadeCount < 2)
-		OGRE_EXCEPT(Exception::ERR_INVALIDPARAMS, "Cannot specify less than 2 cascades", 
-		"StableCSMShadowCameraSetup::calculateSplitPoints");
+	OgreAssert(cascadeCount >= 2, "Cannot specify less than 2 cascades");
 
 	mSplitPoints.resize(cascadeCount + 1);
 	mCascadeCount = cascadeCount;
@@ -43,9 +40,7 @@ void StableCSMShadowCameraSetup::calculateSplitPoints(size_t cascadeCount, Real 
 //---------------------------------------------------------------------
 void StableCSMShadowCameraSetup::setSplitPoints(const SplitPointList& newSplitPoints)
 {
-	if (newSplitPoints.size() < 3) // 3, not 2 since splits + 1 points
-		OGRE_EXCEPT(Exception::ERR_INVALIDPARAMS, "Cannot specify less than 2 splits", 
-		"StableCSMShadowCameraSetup::setSplitPoints");
+	OgreAssert(newSplitPoints.size() >= 3, "Cannot specify less than 2 splits"); // 3, not 2 since splits + 1 points
 	mCascadeCount = newSplitPoints.size() - 1;
 	mSplitPoints = newSplitPoints;
 }
@@ -70,8 +65,6 @@ void StableCSMShadowCameraSetup::getShadowCamera(const Ogre::SceneManager *sm, c
 		farDist += mSplitPadding;
 	}
 
-	mCurrentIteration = iteration;
-
 	getShadowCameraForCascade(sm, cam, vp, light, texCam, iteration, nearDist, farDist);
 }
 
@@ -81,6 +74,8 @@ void StableCSMShadowCameraSetup::getShadowCameraForCascade (const SceneManager *
 	const Viewport *vp, const Light *light, Camera *texCam, size_t iteration,
 	Ogre::Real nearSplit, Ogre::Real farSplit) const
 {
+	OgreAssert(light->getType() == Light::LT_DIRECTIONAL, "only directional lights supported");
+
 	Vector3 pos, dir;
 	Quaternion q;
 
@@ -88,105 +83,89 @@ void StableCSMShadowCameraSetup::getShadowCameraForCascade (const SceneManager *
 	texCam->setCustomViewMatrix(false);
 	texCam->setCustomProjectionMatrix(false);
 
-	// Directional lights 
-	if (light->getType() == Light::LT_DIRECTIONAL)
+	// set up the shadow texture
+	// Set ortho projection
+	texCam->setProjectionType(PT_ORTHOGRAPHIC);
+	// set easy FOV and near dist so that texture covers far dist
+	texCam->setFOVy(Degree(90));
+
+	float nearClip = light->_deriveShadowNearClipDistance(cam);
+
+	texCam->setNearClipDistance(nearClip);
+	texCam->setFarClipDistance(light->_deriveShadowFarClipDistance());
+
+	float farClip = light->getShadowFarDistance();
+	if (farClip == 0)
+		farClip = nearClip * 3000; // make one up
+
+	// Calculate texCam direction, which same as directional light direction
+	dir = - light->getDerivedDirection(); // backwards since point down -z
+	dir.normalise();
+
+
+	//get light orientation
+
+	Vector3 up = Vector3::UNIT_Y;
+	// Check it's not coincident with dir
+	if (Math::Abs(up.dotProduct(dir)) >= 1.0f)
 	{
-		// set up the shadow texture
-		// Set ortho projection
-		texCam->setProjectionType(PT_ORTHOGRAPHIC);
-		// set easy FOV and near dist so that texture covers far dist
-		texCam->setFOVy(Degree(90));
+		// Use camera up
+		up = Vector3::UNIT_Z;
+	}
+	q = Math::lookRotation(dir, up);
 
-		float nearClip = light->getShadowNearClipDistance();
-		if (nearClip <= 0.0f)
-			nearClip = cam->getNearClipDistance();
+	// Find minimum enclosing sphere for view frustum
+	// We do this in local space so that we don't have slight precision variation between frames
+	float vertical = Math::Tan(cam->getFOVy()*0.5f);
+	float horizontal = Math::Tan(cam->getFOVy()*0.5f * cam->getAspectRatio());
 
-		float farClip = light->getShadowFarClipDistance();
-		if (farClip <= 0.0f)
-			farClip = cam->getFarClipDistance();
+	Vector3 topLeftFar;
+	topLeftFar.x = horizontal * farSplit;
+	topLeftFar.y = vertical * farSplit;
+	topLeftFar.z = farSplit;
 
-		texCam->setNearClipDistance(nearClip);
-		texCam->setFarClipDistance(farClip);
+	Vector3 bottomRightNear;
+	bottomRightNear.z = nearSplit;
+	bottomRightNear.x = horizontal * bottomRightNear.z;
+	bottomRightNear.y = vertical * bottomRightNear.z;
 
-		// Calculate texCam direction, which same as directional light direction
-		dir = - light->getDerivedDirection(); // backwards since point down -z
-		dir.normalise();
+	float dist = (topLeftFar.squaredLength() - bottomRightNear.squaredLength()) / (2 * (topLeftFar.z - bottomRightNear.z));
 
-
-		//get light orientation
-
-		Vector3 up = Vector3::UNIT_Y;
-		// Check it's not coincident with dir
-		if (Math::Abs(up.dotProduct(dir)) >= 1.0f)
-		{
-			// Use camera up
-			up = Vector3::UNIT_Z;
-		}
-		// cross twice to rederive, only direction is unaltered
-		Vector3 left = dir.crossProduct(up);
-		left.normalise();
-		up = dir.crossProduct(left);
-		up.normalise();
-		// Derive quaternion from axes
-		q.FromAxes(left, up, dir);
-
-		// Find minimum enclosing sphere for view frustum
-		// We do this in local space so that we don't have slight precision variation between frames
-		float vertical = Math::Tan(cam->getFOVy()*0.5f);
-		float horizontal = Math::Tan(cam->getFOVy()*0.5f * cam->getAspectRatio());
-
-		Vector3 topLeftFar;
-		topLeftFar.x = horizontal * farSplit;
-		topLeftFar.y = vertical * farSplit;
-		topLeftFar.z = farSplit;
-
-		Vector3 bottomRightNear;
-		bottomRightNear.z = nearSplit;
-		bottomRightNear.x = horizontal * bottomRightNear.z;
-		bottomRightNear.y = vertical * bottomRightNear.z;
-
-		float dist = (topLeftFar.squaredLength() - bottomRightNear.squaredLength()) / (2 * (topLeftFar.z - bottomRightNear.z));
-
-		if (dist > farSplit)
-		{
-			dist = farSplit;
-		}
-
-		Vector3 localPos(0, 0, -dist); // we have now found the point along frustum center which is equi-distant to the opposing corner positions
-
-		Real diameter = 2.0f * topLeftFar.distance(-localPos);
-		pos = cam->getDerivedPosition() + cam->getDerivedOrientation() * localPos;
-
-		diameter *= (Real)1.01; // allow some boundary pixels for filtering etc. TODO - make this a user constant
-		pos += dir * 0.5 * (farClip - nearClip); // pull light back so we can see the scene
-
-
-		//calculate window size
-		texCam->setOrthoWindowWidth(diameter);
-
-
-		// Round local x/y position based on a world-space texel; this helps to reduce
-		// jittering caused by the projection moving with the camera
-		Real worldTexelSize = (texCam->getOrthoWindowWidth()) / texCam->getViewport()->getActualWidth();
-
-		//convert world space camera position into light space
-		Vector3 lightSpacePos = q.Inverse() * pos;
-		
-		//snap to nearest texel
-		lightSpacePos.x -= fmod(lightSpacePos.x, worldTexelSize);
-		lightSpacePos.y -= fmod(lightSpacePos.y, worldTexelSize);
-
-		//convert back to world space
-		pos = q * lightSpacePos;
+	if (dist > farSplit)
+	{
+		dist = farSplit;
 	}
 
+	Vector3 localPos(0, 0, -dist); // we have now found the point along frustum center which is equi-distant to the opposing corner positions
+
+	Real diameter = 2.0f * topLeftFar.distance(-localPos);
+	pos = cam->getDerivedPosition() + cam->getDerivedOrientation() * localPos;
+
+	diameter *= (Real)1.01; // allow some boundary pixels for filtering etc. TODO - make this a user constant
+	pos += dir * 0.5 * (farClip - nearClip); // pull light back so we can see the scene
+
+
+	//calculate window size
+	texCam->setOrthoWindowWidth(diameter);
+
+
+	// Round local x/y position based on a world-space texel; this helps to reduce
+	// jittering caused by the projection moving with the camera
+	Real worldTexelSize = (texCam->getOrthoWindowWidth()) / texCam->getViewport()->getActualWidth();
+
+	//convert world space camera position into light space
+	Vector3 lightSpacePos = q.Inverse() * pos;
+	
+	//snap to nearest texel
+	lightSpacePos.x -= fmod(lightSpacePos.x, worldTexelSize);
+	lightSpacePos.y -= fmod(lightSpacePos.y, worldTexelSize);
+
+	//convert back to world space
+	pos = q * lightSpacePos;
 
 	// Finally set position
 	texCam->getParentNode()->setPosition(pos);
 	texCam->getParentNode()->setOrientation(q);
-
-	// set some GPU shader parameters
-	mGpuConstants->updateCascade(*texCam, iteration);
 }
 
 }

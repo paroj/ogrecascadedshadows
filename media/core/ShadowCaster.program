@@ -7,7 +7,6 @@ vertex_program ShadowCasterVP cg
 	default_params
 	{
 		param_named_auto worldViewProj worldviewproj_matrix
-		param_named_auto texelOffsets texel_offsets
 	}
 }
 

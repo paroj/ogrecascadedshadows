@@ -12,4 +12,7 @@ target_link_libraries (${APP_NAME} OgreBites)
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/resources.cfg" "\
     [General]
     FileSystem=${PROJECT_SOURCE_DIR}/media/core
-    FileSystem=${PROJECT_SOURCE_DIR}/media/example")
+    FileSystem=${PROJECT_SOURCE_DIR}/media/example
+    FileSystem=${OGRE_MEDIA_DIR}/models
+    FileSystem=${OGRE_MEDIA_DIR}/materials/textures
+    Zip=${OGRE_MEDIA_DIR}/packs/cubemapsJS.zip")

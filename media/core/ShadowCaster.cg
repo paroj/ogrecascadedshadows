@@ -15,10 +15,7 @@ void main_vp
 )
 {
 	outPos = mul(worldViewProj, position);
-
-	// fix pixel / texel alignment
-	outPos.xy += texelOffsets.zw * outPos.w;
-	oTexCoord0.x = outPos.z;
+	oTexCoord0 = outPos.zw;
 }
 
 // Shadow caster fragment program for high-precision single-channel textures	
@@ -28,7 +25,7 @@ void main_fp
 	out float4 result		: COLOR
 )
 {
-	float finalDepth = iTexCoord0.x;
+	float finalDepth = iTexCoord0.x/iTexCoord0.y;
 
 	result = float4(finalDepth, 0, 0, 1);
 }

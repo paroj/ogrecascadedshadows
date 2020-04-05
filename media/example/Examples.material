@@ -22,7 +22,7 @@ material Examples/Athene/Basic : ShadowReceiver
 		{
 			texture_unit Diffuse
 			{
-				texture athene.jpg 
+				texture egyptrockyfull.jpg
 			}
 		}
 	}
@@ -39,7 +39,7 @@ material Examples/StormySkyBox
 
 			texture_unit
 			{
-				cubic_texture stormy.jpg separateUV
+				texture stormy.jpg cubic
 				tex_address_mode clamp
 			}
 		}

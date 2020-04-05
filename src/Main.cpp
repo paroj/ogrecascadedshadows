@@ -25,11 +25,12 @@ public:
 		delete mGpuConstants;
 	}
 
+	static const int MAX_CASCADES = 4;
+
 	void loadResources(void)
 	{
 		// Setup shadow GPU parameters before we load the resource groups so materials can use the parameters
-		static const int maxCascades = 4;
-		mGpuConstants = new CSMGpuConstants(maxCascades);
+		mGpuConstants = new CSMGpuConstants(MAX_CASCADES);
 
 		OgreBites::ApplicationContext::loadResources();
 	}
@@ -89,10 +90,8 @@ private:
 			{
 				if (x != 0 || z != 0)
 				{
-					StringUtil::StrStreamType str;
-					str << "col" << x << "_" << z;
 					SceneNode* node = mSceneMgr->getRootSceneNode()->createChildSceneNode();
-					pEnt = mSceneMgr->createEntity( str.str(), "column.mesh" );
+					pEnt = mSceneMgr->createEntity( StringUtil::format("col%d_%d", x, z), "column.mesh" );
 					pEnt->setMaterialName("Examples/Rockwall");
 					node->attachObject( pEnt );
 					node->translate(x*500,0, z*500);
@@ -124,9 +123,12 @@ private:
 		Light* light = mSceneMgr->createLight();
 		light->setType(Light::LT_DIRECTIONAL);
 		Vector3 direction(1,-1,0.4);
-		light->setDirection(direction.normalisedCopy());
 		light->setCastShadows(true);
 		light->setShadowFarClipDistance(12000);
+
+		auto node = mSceneMgr->getRootSceneNode()->createChildSceneNode();
+		node->attachObject(light);
+		node->setDirection(direction.normalisedCopy());
 	}
 
 	void setupShadows()
@@ -135,22 +137,23 @@ private:
 		mSceneMgr->setShadowTechnique(SHADOWTYPE_TEXTURE_MODULATIVE_INTEGRATED);
 		mSceneMgr->setShadowCasterRenderBackFaces(false);
 
-		static int textureCount = 4;
-		mSceneMgr->setShadowTextureCount(textureCount);
-		mSceneMgr->setShadowTextureCountPerLightType(Ogre::Light::LT_DIRECTIONAL, textureCount);
+		mSceneMgr->setShadowTextureCount(MAX_CASCADES);
+		mSceneMgr->setShadowTextureCountPerLightType(Ogre::Light::LT_DIRECTIONAL, MAX_CASCADES);
 
-		for (int i=0; i < textureCount; i++)
+		mSceneMgr->addListener(mGpuConstants);
+
+		for (int i=0; i < MAX_CASCADES; i++)
 			mSceneMgr->setShadowTextureConfig(i, 1024, 1024, Ogre::PF_FLOAT32_R);
 
 		float farClip = 5000.0f;
 
 		// Create the CSM shadow setup
-		StableCSMShadowCameraSetup* shadowSetup = new StableCSMShadowCameraSetup(mGpuConstants);
+		StableCSMShadowCameraSetup* shadowSetup = new StableCSMShadowCameraSetup();
 
 		float lambda = 0.93f; // lower lamdba means more uniform, higher lambda means more logarithmic
 		float firstSplitDist = 50.0f;
 
-		shadowSetup->calculateSplitPoints(textureCount, firstSplitDist, farClip, lambda);
+		shadowSetup->calculateSplitPoints(MAX_CASCADES, firstSplitDist, farClip, lambda);
 		StableCSMShadowCameraSetup::SplitPointList points = shadowSetup->getSplitPoints();
 
 		// Apply settings

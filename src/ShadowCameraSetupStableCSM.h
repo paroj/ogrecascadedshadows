@@ -9,15 +9,13 @@
 
 namespace Ogre {
 
-class CSMGpuConstants;
-
 class StableCSMShadowCameraSetup : public Ogre::DefaultShadowCameraSetup
 {
 public:
 	typedef std::vector<Ogre::Real> SplitPointList;
 
 public:
-	StableCSMShadowCameraSetup(CSMGpuConstants* constants);
+	StableCSMShadowCameraSetup();
 	~StableCSMShadowCameraSetup();
 
 	/** Calculate a new splitting scheme.
@@ -50,23 +48,17 @@ public:
 		const Ogre::Viewport *vp, const Ogre::Light *light, Ogre::Camera *texCam, size_t iteration) const;
 
 	/// Returns the calculated split points.
-	inline const SplitPointList& getSplitPoints() const
+	const SplitPointList& getSplitPoints() const
 	{ return mSplitPoints; }
 
-protected:
+private:
 	void getShadowCameraForCascade(const Ogre::SceneManager *sm, const Ogre::Camera *cam,
 		const Ogre::Viewport *vp, const Ogre::Light *light, Ogre::Camera *texCam, size_t iteration,
 		Ogre::Real nearSplit, Ogre::Real farSplit) const;
 
-protected:
 	size_t mCascadeCount;
 	SplitPointList mSplitPoints;
 	Ogre::Real mSplitPadding;
-
-	mutable size_t mCurrentIteration;
-
-private:
-	CSMGpuConstants* mGpuConstants;
 };
 
 } // namespace Ogre

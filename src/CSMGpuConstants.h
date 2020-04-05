@@ -10,20 +10,18 @@
 namespace Ogre
 {
 
-class CSMGpuConstants
+class CSMGpuConstants : public SceneManager::Listener
 {
 public:
 	CSMGpuConstants(size_t cascadeCount);
-	void updateCascade(const Ogre::Camera &texCam, size_t index);
+	void shadowTextureCasterPreViewProj(Light* light, Camera* camera, size_t iteration);
 
 private:
 	Ogre::GpuSharedParametersPtr mParamsScaleBias;
-	Ogre::GpuSharedParametersPtr mParamsShadowMatrix;
 
 	Ogre::Matrix4 mFirstCascadeViewMatrix;
 	Ogre::Real mFirstCascadeCamWidth;
 	Ogre::Real mViewRange;
-		Matrix4 hack;
 };
 
 } // namespace Ogre

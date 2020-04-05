@@ -13,40 +13,32 @@ CSMGpuConstants::CSMGpuConstants(size_t cascadeCount)
 	{
 		mParamsScaleBias->addConstantDefinition("texMatrixScaleBias" + StringConverter::toString(i), GCT_FLOAT4);
 	}
-	
-	mParamsShadowMatrix = GpuProgramManager::getSingletonPtr()->createSharedParameters("params_shadowMatrix");
-	mParamsShadowMatrix->addConstantDefinition("texMatrix0", GCT_MATRIX_4X4);
 }
 
-void CSMGpuConstants::updateCascade(const Ogre::Camera &texCam, size_t index)
+void CSMGpuConstants::shadowTextureCasterPreViewProj(Light* light, Camera* texCam, size_t index)
 {
 	if (index == 0)
 	{
-		mFirstCascadeViewMatrix = texCam.getViewMatrix();
-		mFirstCascadeCamWidth = texCam.getOrthoWindowWidth();
-		mViewRange = texCam.getFarClipDistance() - texCam.getNearClipDistance();
-
-		Matrix4 texMatrix0 = Matrix4::CLIPSPACE2DTOIMAGESPACE * texCam.getProjectionMatrixWithRSDepth() * mFirstCascadeViewMatrix;
-		mParamsShadowMatrix->setNamedConstant("texMatrix0", texMatrix0);
+		mFirstCascadeViewMatrix = texCam->getViewMatrix();
+		mFirstCascadeCamWidth = texCam->getOrthoWindowWidth();
+		mViewRange = texCam->getFarClipDistance() - texCam->getNearClipDistance();
 	}
 	else
 	{
-		hack = Matrix4::CLIPSPACE2DTOIMAGESPACE * texCam.getProjectionMatrixWithRSDepth() * texCam.getViewMatrix();
-
 		Matrix4 mat0 = mFirstCascadeViewMatrix;
-		Matrix4 mat1 = texCam.getViewMatrix();
+		Matrix4 mat1 = texCam->getViewMatrix();
 
 		Real offsetX = mat1[0][3] - mat0[0][3];
 		Real offsetY = mat1[1][3] - mat0[1][3];
 		Real offsetZ = mat1[2][3] - mat0[2][3];
 
 		Real width0 = mFirstCascadeCamWidth;
-		Real width1 = texCam.getOrthoWindowWidth();
+		Real width1 = texCam->getOrthoWindowWidth();
 		
 		Real oneOnWidth = 1.0f / width0;
 		Real offCenter = width1 / (2.0f * width0) - 0.5;
 
-		RenderSystem* rs = Ogre::Root::getSingletonPtr()->getRenderSystem();
+		RenderSystem* rs = Root::getSingletonPtr()->getRenderSystem();
 		float depthRange = Math::Abs(rs->getMinimumDepthInputValue() - rs->getMaximumDepthInputValue());
 
 		Vector4 result;

@@ -9,18 +9,16 @@ uniform float4 texMatrixScaleBias3;
 uniform float4 fixedDepthBias;
 uniform float4 gradientScaleBias;
 uniform float4 shadowMapSize;
-uniform float4 invShadowMapSize;
 
 
 
 #define BLENDING // enables blending between cascades
 
-
 #ifdef DEBUG_CSM
-half3 getCsmShadowFactor
-#else
-half getCsmShadowFactor
+	static half3 cascadeColor = float3(1,1,1);
 #endif
+
+half getCsmShadowFactor
 (
 	uniform sampler2D shadowTexture0,
 	uniform sampler2D shadowTexture1,
@@ -32,14 +30,21 @@ half getCsmShadowFactor
 {
 	half factor = 1;
 
-#ifdef DEBUG_CSM
-	half3 cascadeColor = float3(1,1,1);
-#endif
+	float4 lightSpacePos1;
+	lightSpacePos1.xyz = lightSpacePos0.xyz + texMatrixScaleBias1.xyz;
+	lightSpacePos1.xy *= texMatrixScaleBias1.w;
 
+	float4 lightSpacePos2;
+	lightSpacePos2.xyz = lightSpacePos0.xyz + texMatrixScaleBias2.xyz;
+	lightSpacePos2.xy *= texMatrixScaleBias2.w;
+
+	float4 lightSpacePos3;
+	lightSpacePos3.xyz = lightSpacePos0.xyz + texMatrixScaleBias3.xyz;
+	lightSpacePos3.xy *= texMatrixScaleBias3.w;
 
 	if (lightSpacePos0.x > 0.01 && lightSpacePos0.y > 0.01 && lightSpacePos0.x < 0.99 && lightSpacePos0.y < 0.99)
 	{
-		factor = getShadowFactor(shadowTexture0, lightSpacePos0, shadowMapSize.x, invShadowMapSize.x,
+		factor = getShadowFactor(shadowTexture0, lightSpacePos0, shadowMapSize.x, shadowMapSize.z,
 										 fixedDepthBias.x, gradientScaleBias.x, shadowLightDotLN);
 
 	#ifdef DEBUG_CSM
@@ -47,11 +52,7 @@ half getCsmShadowFactor
 	#endif
 
 	#ifdef BLENDING
-		float4 lightSpacePos1;
-		lightSpacePos1.xyz = lightSpacePos0.xyz + texMatrixScaleBias1.xyz;
-		lightSpacePos1.xy *= texMatrixScaleBias1.w;
-
-		half blend = getShadowFactor(shadowTexture1, lightSpacePos1, shadowMapSize.y, invShadowMapSize.y,
+		half blend = getShadowFactor(shadowTexture1, lightSpacePos1, shadowMapSize.x, shadowMapSize.z,
 										 fixedDepthBias.y, gradientScaleBias.y, shadowLightDotLN);
 
 		half weight = saturate((max( abs(lightSpacePos0.x-0.5), abs(lightSpacePos0.y-0.5)) -0.375) * 8);
@@ -64,91 +65,61 @@ half getCsmShadowFactor
 	#endif
 
 	}
-	else
+	else if (lightSpacePos1.x > 0.01 && lightSpacePos1.y > 0.01 && lightSpacePos1.x < 0.99 && lightSpacePos1.y < 0.99)
 	{
-		float4 lightSpacePos1;
-		lightSpacePos1.xyz = lightSpacePos0.xyz + texMatrixScaleBias1.xyz;
-		lightSpacePos1.xy *= texMatrixScaleBias1.w;
+		factor = getShadowFactor(shadowTexture1, lightSpacePos1, shadowMapSize.x, shadowMapSize.z,
+											fixedDepthBias.y, gradientScaleBias.y, shadowLightDotLN);
 
-		if (lightSpacePos1.x > 0.01 && lightSpacePos1.y > 0.01 && lightSpacePos1.x < 0.99 && lightSpacePos1.y < 0.99)
-		{
-			factor = getShadowFactor(shadowTexture1, lightSpacePos1, shadowMapSize.y, invShadowMapSize.y,
-											 fixedDepthBias.y, gradientScaleBias.y, shadowLightDotLN);
+	#ifdef DEBUG_CSM
+		cascadeColor = float3(0,1,0);
+	#endif
+
+	#ifdef BLENDING
+		half blend = getShadowFactor(shadowTexture2, lightSpacePos2, shadowMapSize.x, shadowMapSize.z,
+												fixedDepthBias.z, gradientScaleBias.z, shadowLightDotLN);
+		half weight = saturate((max( abs(lightSpacePos1.x-0.5), abs(lightSpacePos1.y-0.5) ) -0.4375) * 16);
+		factor = lerp (factor, blend, weight);
 
 		#ifdef DEBUG_CSM
-			cascadeColor = float3(0,1,0);
+			cascadeColor = lerp(cascadeColor, float3(0,0,1), weight);
 		#endif
 
-		#ifdef BLENDING
-			float4 lightSpacePos2;
-			lightSpacePos2.xyz = lightSpacePos0.xyz + texMatrixScaleBias2.xyz;
-			lightSpacePos2.xy *= texMatrixScaleBias2.w;
+	#endif
+	}
+	else if (lightSpacePos2.x > 0.01 && lightSpacePos2.y > 0.01 && lightSpacePos2.x < 0.99 && lightSpacePos2.y < 0.99)
+	{
+		factor = getShadowFactor(shadowTexture2, lightSpacePos2, shadowMapSize.x, shadowMapSize.z,
+											fixedDepthBias.z, gradientScaleBias.z, shadowLightDotLN);
 
-			half blend = getShadowFactor(shadowTexture2, lightSpacePos2, shadowMapSize.z, invShadowMapSize.z,
-												 fixedDepthBias.z, gradientScaleBias.z, shadowLightDotLN);
-			half weight = saturate((max( abs(lightSpacePos1.x-0.5), abs(lightSpacePos1.y-0.5) ) -0.4375) * 16);
-			factor = lerp (factor, blend, weight);
+	#ifdef DEBUG_CSM
+		cascadeColor = float3(0,0,1);
+	#endif
 
-			#ifdef DEBUG_CSM
-				cascadeColor = lerp(cascadeColor, float3(0,0,1), weight);
-			#endif
-
-		#endif
-		}
-		else
-		{
-			float4 lightSpacePos2;
-			lightSpacePos2.xyz = lightSpacePos0.xyz + texMatrixScaleBias2.xyz;
-			lightSpacePos2.xy *= texMatrixScaleBias2.w;
-
-			if (lightSpacePos2.x > 0.01 && lightSpacePos2.y > 0.01 && lightSpacePos2.x < 0.99 && lightSpacePos2.y < 0.99)
-			{
-				factor = getShadowFactor(shadowTexture2, lightSpacePos2, shadowMapSize.z, invShadowMapSize.z,
-												 fixedDepthBias.z, gradientScaleBias.z, shadowLightDotLN);
-
-			#ifdef DEBUG_CSM
-				cascadeColor = float3(0,0,1);
-			#endif
-
-			#ifdef BLENDING
-				float4 lightSpacePos3;
-				lightSpacePos3.xyz = lightSpacePos0.xyz + texMatrixScaleBias3.xyz;
-				lightSpacePos3.xy *= texMatrixScaleBias3.w;
-
-				half blend = getShadowFactor(shadowTexture3, lightSpacePos3, shadowMapSize.w, invShadowMapSize.w,
-															fixedDepthBias.w, gradientScaleBias.w, shadowLightDotLN);
-		
-				half weight = saturate((max( abs(lightSpacePos2.x-0.5), abs(lightSpacePos2.y-0.5)) -0.375) * 8);
-				factor = lerp (factor, blend, weight);
-
-				#ifdef DEBUG_CSM
-					cascadeColor = lerp(cascadeColor, float3(1,1,0), weight);
-				#endif
-			#endif
-			}
-			else
-			{
-				float4 lightSpacePos3;
-				lightSpacePos3.xyz = lightSpacePos0.xyz + texMatrixScaleBias3.xyz;
-				lightSpacePos3.xy *= texMatrixScaleBias3.w;
-
-				factor = getShadowFactor(shadowTexture3, lightSpacePos3, shadowMapSize.w, invShadowMapSize.w,
+	#ifdef BLENDING
+		half blend = getShadowFactor(shadowTexture3, lightSpacePos3, shadowMapSize.x, shadowMapSize.z,
 													fixedDepthBias.w, gradientScaleBias.w, shadowLightDotLN);
 
-				// Fade out to edges
-				half weight = saturate((max( abs(lightSpacePos3.x-0.5), abs(lightSpacePos3.y-0.5)) -0.375) * 8);
-				factor = lerp (factor, 1, weight);
+		half weight = saturate((max( abs(lightSpacePos2.x-0.5), abs(lightSpacePos2.y-0.5)) -0.375) * 8);
+		factor = lerp (factor, blend, weight);
 
-				#ifdef DEBUG_CSM
-					cascadeColor = float3(1,1,weight);
-				#endif
-			}
-		}
+		#ifdef DEBUG_CSM
+			cascadeColor = lerp(cascadeColor, float3(1,1,0), weight);
+		#endif
+	#endif
 	}
+	else
+	{
+		factor = getShadowFactor(shadowTexture3, lightSpacePos3, shadowMapSize.x, shadowMapSize.z,
+											fixedDepthBias.w, gradientScaleBias.w, shadowLightDotLN);
 
-#ifdef DEBUG_CSM
-	return factor * cascadeColor;
-#endif
+		// Fade out to edges
+		half weight = saturate((max( abs(lightSpacePos3.x-0.5), abs(lightSpacePos3.y-0.5)) -0.375) * 8);
+		factor = lerp (factor, 1, weight);
+
+		#ifdef DEBUG_CSM
+			cascadeColor = float3(1,1,weight);
+		#endif
+	}
 
 	return factor;
 }
